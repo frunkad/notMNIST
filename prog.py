@@ -5,17 +5,27 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from string import ascii_lowercase
 from random import randint
-
 tf.logging.set_verbosity(tf.logging.INFO)
 
-mat_file = loadmat("datasets/notMNIST_small.mat")
-L = len(mat_file['labels'])
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
+mat_file = loadmat("datasets/notMNIST_large.mat")
+L = len(mat_file['labels'][0]) # For short, use mat_file['labels'], for large use mat_file['labels'][0]
+print("Length of the Dataset: ",L)
 mat_file['images'] = np.array([mat_file['images'][:,:,i] for i in range(L)])
 # vf = np.vectorize(lambda x: ascii_lowercase[int(x)])
 vf = np.vectorize(lambda x: int(x))
-mat_file['labels'] = vf(mat_file['labels'])
-
+mat_file['labels'] = vf(mat_file['labels'][0])
+possible_values = set(mat_file['labels'])
+print(bcolors.BOLD+"Shape of Images: {}\nShape of Labels: {}\nPossible Values: {}".format(mat_file['images'].shape,mat_file['labels'].shape,possible_values)+bcolors.ENDC)
 seed = randint(1,1000)
 np.random.seed(seed)
 np.random.shuffle(mat_file['images'])

@@ -5,7 +5,7 @@ __pycache__/
 
 # Datasets
 datasets/
-
+prog2.py
 # C extensions
 *.so
 
