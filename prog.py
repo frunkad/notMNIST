@@ -5,8 +5,18 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from string import ascii_lowercase
 from random import randint
-import sys,time
-tf.logging.set_verbosity(tf.logging.INFO)
+import sys,time,os,argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--gpuoff",help="Turn the GPU Device off",action="store_true")
+parser.add_argument("-d","--dataset",choices=["small","large"],help="small dataset or large",default="small")
+parser.add_argument("-s","--save",help="save to hdf5 file",default = False)
+argv = parser.parse_args()
+
+if argv.gpuoff:
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+tf.logging.set_verbosity(tf.logging.ERROR)
 
 class bcolors:
     HEADER = '\033[95m'
@@ -20,7 +30,7 @@ class bcolors:
 
 DATASET = "small" # or "large"
 
-if "large" in sys.argv:
+if argv.dataset == "large":
     DATASET = "large"
 
 
@@ -58,7 +68,7 @@ def plot(i=1):
     plt.imshow(trainX[i].reshape(28,28))
     plt.show()
 
-#START
+# #START
 trainX = np.reshape(trainX,(train_len,28*28))
 testX = np.reshape(testX,(test_len,28*28))
 
@@ -68,23 +78,45 @@ testX /= 255
 trainy = tf.keras.utils.to_categorical(trainy,10)
 testy = tf.keras.utils.to_categorical(testy,10)
 
-def try_model(activator1 = tf.nn.relu, activator2 = tf.nn.softmax, loss = 'binary_crossentropy',optimizer = 'rmsprop',epochs = 5,save = False):
-    try_model.count += 1
+trainX = np.expand_dims(trainX,-1)
+testX = np.expand_dims(trainX,-1)
+
+def tostr(s):
+    if callable(s):
+        return s.__name__
+    else:
+        return str(s)
+
+def create_networks():
+    trainX = np.reshape(trainX,(train_len,28*28))
+    testX = np.reshape(testX,(test_len,28*28))
+
     model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Dense(512, activation=activator1, input_shape=(784,)))
-    model.add(tf.keras.layers.Dense(10, activation=activator2))
-    # model.add(tf.keras.layers.Dropout(0.5))
-
+    model.add(tf.keras.layers.Dense(64, activation=tf.nn.relu, input_shape=(784,)))
+    model.add(tf.keras.layers.Dropout(0.65))
+    model.add(tf.keras.layers.Dense(10,activation=tf.nn.softmax))
+    # 
     # We will now compile and print out a summary of our model
-    model.compile(loss=loss,
-                optimizer=optimizer,
+    model.compile(loss='categorical_crossentropy',
+                optimizer='rmsprop',
                 metrics=['accuracy'])
+    return model
 
-    # model.summary()
-    model.fit(trainX,trainy,epochs=epochs,verbose=1)
+def try_model(
+                epochs = 5,
+                save = False,
+                batch_size = None,
+                model = create_networks()
+            ):
+    try_model.count += 1
+
+
+    
+    model.fit(trainX,trainy,epochs=epochs,verbose=1,batch_size=batch_size)
     lossed,accuracy = model.evaluate(testX,testy,verbose=1)
-    print("===================\nModel ",try_model.count," : ")
-    print("\tActivator 1: {}\n\tActivator 2: {}\n\tLoss: {}\n\tOptimizer: {}\n\tEpochs: {}".format(activator1.__name__,activator2.__name__,loss,optimizer,epochs))
+    print("====================================\nModel ",try_model.count," : ")
+    # print("\tActivator 1: {}\n\tActivator 2: {}\n\tLoss: {}\n\tOptimizer: {}\n\tEpochs: {}".format(tostr(activator1),tostr(activator2),loss,tostr(optimizer),epochs))
+    model.summary()
     print(bcolors.OKGREEN+"\tAccuracy: {}".format(accuracy)+bcolors.ENDC)
     print(bcolors.WARNING+"\tLoss: {}".format(lossed)+bcolors.ENDC)
     if save:
@@ -99,4 +131,4 @@ try_model.count = 0
 
 
 if __name__ == "__main__":
-    try_model(save=True,epochs=4)
+    try_model(save=argv.save)
